@@ -88,7 +88,7 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 	self.cookies = append(self.cookies, respCks...);
 
 	data, _ := ioutil.ReadAll(response.Body)
-	return data;
+	return data,response.StatusCode;
 }
 
 
