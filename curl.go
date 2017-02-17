@@ -61,7 +61,7 @@ func (self *Browser) Get(requestUrl string) ([]byte, int) {
 	response,err := self.client.Do(request);
 	if err!=nil{
 		fmt.Println(err);
-		return nil,0;
+		return []byte("error"),0;
 	}
 	defer response.Body.Close();
 
@@ -79,7 +79,7 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte) 
 	response,err := self.client.Do(request);
 	if err!=nil{
 		fmt.Println(err);
-		return nil,0;
+		return []byte("error"),0;
 	}
 	defer response.Body.Close();
 
