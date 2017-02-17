@@ -61,7 +61,7 @@ func (self *Browser) Get(requestUrl string) ([]byte, int) {
 	response,err := self.client.Do(request);
 	if err!=nil{
 		fmt.Println(err);
-		return []byte("error"),0;
+		return nil,0;
 	}
 	defer response.Body.Close();
 
@@ -70,7 +70,7 @@ func (self *Browser) Get(requestUrl string) ([]byte, int) {
 }
 
 //发送Post请求
-func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte) {
+func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, int) {
 	postData := self.encodeParams(params);
 	request,_ := http.NewRequest("POST", requestUrl, strings.NewReader(postData));
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -79,7 +79,7 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte) 
 	response,err := self.client.Do(request);
 	if err!=nil{
 		fmt.Println(err);
-		return []byte("error"),0;
+		return nil,0;
 	}
 	defer response.Body.Close();
 
