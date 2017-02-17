@@ -7,10 +7,10 @@
 package curl
 
 import (
-"net/http"
-"net/url"
-"io/ioutil"
-"strings"
+	"net/http"
+	"net/url"
+	"io/ioutil"
+	"strings"
 	"fmt"
 )
 
