@@ -15,6 +15,7 @@ import (
 )
 
 type Browser struct {
+	header map[string]string;
 	cookies []*http.Cookie;
 	client *http.Client;
 }
@@ -22,6 +23,7 @@ type Browser struct {
 //初始化
 func NewBrowser() *Browser {
 	hc := &Browser{};
+	hc.header = make(map[string]string)
 	hc.client = &http.Client{};
 	//为所有重定向的请求增加cookie
 	hc.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
@@ -42,6 +44,12 @@ func (self *Browser) SetProxyUrl(proxyUrl string)  {
 	};
 	transport := &http.Transport{Proxy:proxy};
 	self.client.Transport = transport;
+}
+
+func (self *Browser) AddHeader(header map[string]string)  {
+	for k,v := range header{
+		self.header[k] = v
+	}
 }
 
 //设置请求cookie
@@ -73,7 +81,9 @@ func (self *Browser) Get(requestUrl string) ([]byte, int) {
 func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, int) {
 	postData := self.encodeParams(params);
 	request,_ := http.NewRequest("POST", requestUrl, strings.NewReader(postData));
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	header := map[string]string{"Content-Type":"application/x-www-form-urlencoded"}
+	self.AddHeader(header)
+	self.setHeader(request)
 	self.setRequestCookie(request);
 
 	response,err := self.client.Do(request);
@@ -91,6 +101,12 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 	return data,response.StatusCode;
 }
 
+//为请求设置header
+func (self *Browser) setHeader(request *http.Request)  {
+	for k,v := range self.header{
+		request.Header.Set(k,v)
+	}
+}
 
 //为请求设置 cookie
 func (self *Browser) setRequestCookie(request *http.Request)  {
