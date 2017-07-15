@@ -86,10 +86,6 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 	self.setHeader(request)
 	self.setRequestCookie(request);
 
-	fmt.Println(requestUrl)
-	fmt.Println(request.Header)
-	fmt.Println(request.Cookies())
-
 	response,err := self.client.Do(request);
 	if err!=nil{
 		fmt.Println("request error");
