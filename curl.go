@@ -86,8 +86,13 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 	self.setHeader(request)
 	self.setRequestCookie(request);
 
+	fmt.Println(requestUrl)
+	fmt.Println(request.Header)
+	fmt.Println(request.Cookies())
+
 	response,err := self.client.Do(request);
 	if err!=nil{
+		fmt.Println("request error");
 		fmt.Println(err);
 		return nil,0;
 	}
@@ -95,7 +100,12 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 
 	//保存响应的 cookie
 	respCks := response.Cookies();
-	self.cookies = append(self.cookies, respCks...);
+	for _,v := range respCks {
+		val,_ := request.Cookie(v.Name)
+		if(val == nil){
+			request.AddCookie(v)
+		}
+	}
 
 	data, _ := ioutil.ReadAll(response.Body)
 	return data,response.StatusCode;
@@ -104,14 +114,19 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 //为请求设置header
 func (self *Browser) setHeader(request *http.Request)  {
 	for k,v := range self.header{
-		request.Header.Set(k,v)
+		if len(request.Header.Get(k))==0{
+			request.Header.Set(k,v)
+		}
 	}
 }
 
 //为请求设置 cookie
 func (self *Browser) setRequestCookie(request *http.Request)  {
 	for _,v := range self.cookies{
-		request.AddCookie(v)
+		val,_ := request.Cookie(v.Name)
+		if(val == nil){
+			request.AddCookie(v)
+		}
 	}
 }
 
