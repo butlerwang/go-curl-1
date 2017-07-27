@@ -29,8 +29,12 @@ content,err := b.Post(loginUrl,loginParams)
 //上传文件
 _, filename, _, _ := runtime.Caller(0)
 f:= path.Join(path.Dir(filename), "1.html")
+loginParams := map[string]string{
+    "username":"15656073550",
+    "password":"e10adc3949ba59abbe56e057f20f883e",
+}
 upUrl := "http://rtpush.com/api/v1/upload"
-content,err = b.UploadFile(upUrl, "file",f,nil)
+content,err = b.UploadFile(upUrl, "file", f, loginParams)
 log.Print(string(content),err)
 
 ```
