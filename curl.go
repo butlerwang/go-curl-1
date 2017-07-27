@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"io/ioutil"
 	"strings"
-	"fmt"
 	"bytes"
 	"mime/multipart"
 	"os"
@@ -19,35 +18,35 @@ import (
 )
 
 type Browser struct {
-	header map[string]string;
-	cookies []*http.Cookie;
-	client *http.Client;
+	header map[string]string
+	cookies []*http.Cookie
+	client *http.Client
 }
 
 //初始化
 func NewBrowser() *Browser {
-	hc := &Browser{};
+	hc := &Browser{}
 	hc.header = make(map[string]string)
-	hc.client = &http.Client{};
+	hc.client = &http.Client{}
 	//为所有重定向的请求增加cookie
 	hc.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if len(via) > 0 {
 			for _,v := range hc.GetCookie() {
-				req.AddCookie(v);
+				req.AddCookie(v)
 			}
 		}
 		return nil
 	}
-	return hc;
+	return hc
 }
 
 //设置代理地址
 func (self *Browser) SetProxyUrl(proxyUrl string)  {
 	proxy := func(_ *http.Request) (*url.URL, error) {
-		return url.Parse(proxyUrl);
-	};
-	transport := &http.Transport{Proxy:proxy};
-	self.client.Transport = transport;
+		return url.Parse(proxyUrl)
+	}
+	transport := &http.Transport{Proxy:proxy}
+	self.client.Transport = transport
 }
 
 func (self *Browser) AddHeader(header map[string]string)  {
@@ -58,84 +57,41 @@ func (self *Browser) AddHeader(header map[string]string)  {
 
 //设置请求cookie
 func (self *Browser) AddCookie(cookies []*http.Cookie)  {
-	self.cookies = append(self.cookies, cookies...);
+	self.cookies = append(self.cookies, cookies...)
 }
 
 //获取当前所有的cookie
 func (self *Browser) GetCookie() ([]*http.Cookie) {
-	return self.cookies;
+	return self.cookies
 }
 
 //发送Get请求
-func (self *Browser) Get(requestUrl string) ([]byte, int) {
-	request,_ := http.NewRequest("GET", requestUrl, nil);
-	self.setHeader(request)
-	self.setRequestCookie(request);
-	response,err := self.client.Do(request);
-	if err!=nil{
-		fmt.Println(err);
-		return nil,0;
-	}
-	defer response.Body.Close();
-
-	//保存响应的 cookie
-	respCks := response.Cookies();
-	for _,v := range respCks {
-		val,_ := request.Cookie(v.Name)
-		if(val == nil){
-			request.AddCookie(v)
-		}
-	}
-
-	data, _ := ioutil.ReadAll(response.Body)
-	return data, response.StatusCode;
+func (self *Browser) Get(requestUrl string) ([]byte, error) {
+	return self.makeRequest("GET", requestUrl,nil)
 }
 
 //发送Post请求
-func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, int) {
-	postData := self.encodeParams(params);
-	request,_ := http.NewRequest("POST", requestUrl, strings.NewReader(postData));
+func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, error) {
 	header := map[string]string{"Content-Type":"application/x-www-form-urlencoded"}
 	self.AddHeader(header)
-	self.setHeader(request)
-	self.setRequestCookie(request);
+	postData := self.encodeParams(params)
 
-	response,err := self.client.Do(request);
-	if err!=nil{
-		fmt.Println(err);
-		return nil,0;
-	}
-	defer response.Body.Close();
-
-	//保存响应的 cookie
-	respCks := response.Cookies();
-	for _,v := range respCks {
-		val,_ := request.Cookie(v.Name)
-		if(val == nil){
-			request.AddCookie(v)
-		}
-	}
-
-	data, _ := ioutil.ReadAll(response.Body)
-	return data,response.StatusCode;
+	return self.makeRequest("POST", requestUrl, strings.NewReader(postData))
 }
 
 //上传文件
 func (self *Browser) UploadFile(requestUrl, fieldName, filename string, params map[string]string)  ([]byte, error) {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
-
 	//关键的一步操作
 	fileWriter, err := bodyWriter.CreateFormFile(fieldName, filename)
 	if err != nil {
-		fmt.Println("error writing to buffer")
 		return nil,err
 	}
 
 	//打开文件句柄操作
 	fh, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("error opening file")
 		return nil,err
 	}
 	defer fh.Close()
@@ -153,32 +109,28 @@ func (self *Browser) UploadFile(requestUrl, fieldName, filename string, params m
 	contentType := bodyWriter.FormDataContentType()
 	bodyWriter.Close()
 
-	request,_ := http.NewRequest("POST", requestUrl, bodyBuf);
 	header := map[string]string{"Content-Type":contentType}
 	self.AddHeader(header)
-	self.setHeader(request)
-	self.setRequestCookie(request);
-
-	response,err := self.client.Do(request);
-	if err!=nil{
-		fmt.Println(err);
-		return nil,err
-	}
-	defer response.Body.Close();
-
-	//保存响应的 cookie
-	respCks := response.Cookies();
-	for _,v := range respCks {
-		val,_ := request.Cookie(v.Name)
-		if(val == nil){
-			request.AddCookie(v)
-		}
-	}
-
-	data, _ := ioutil.ReadAll(response.Body)
-	return data,nil
+	return self.makeRequest("POST",requestUrl,bodyBuf)
 }
 
+
+func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) ([]byte, error) {
+	request,_ := http.NewRequest(method, requestUrl, body)
+	self.setHeader(request)
+	self.setRequestCookie(request)
+	response,err := self.client.Do(request)
+	if err!=nil{
+		return nil,err
+	}
+	defer response.Body.Close()
+
+	respCks := response.Cookies()
+	self.AddCookie(respCks)
+
+	data, _ := ioutil.ReadAll(response.Body)
+	return data, nil
+}
 
 //为请求设置header
 func (self *Browser) setHeader(request *http.Request)  {
@@ -204,9 +156,9 @@ func (self *Browser) setRequestCookie(request *http.Request)  {
 
 //参数 encode
 func (self *Browser) encodeParams(params map[string]string) string {
-	paramsData := url.Values{};
+	paramsData := url.Values{}
 	for k,v := range params {
-		paramsData.Set(k,v);
+		paramsData.Set(k,v)
 	}
-	return paramsData.Encode();
+	return paramsData.Encode()
 }
