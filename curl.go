@@ -15,6 +15,7 @@ import (
 	"mime/multipart"
 	"os"
 	"io"
+	"errors"
 )
 
 type Browser struct {
@@ -115,7 +116,14 @@ func (self *Browser) UploadFile(requestUrl, fieldName, filename string, params m
 }
 
 
-func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) ([]byte, error) {
+func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) (data []byte,err error) {
+	defer func() {
+		if perr:=recover();perr!=nil{
+			s,_ := perr.(string)
+			err = errors.New(s)
+		}
+	}()
+
 	request,_ := http.NewRequest(method, requestUrl, body)
 	self.setHeader(request)
 	self.setRequestCookie(request)
@@ -128,8 +136,8 @@ func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) ([]
 	respCks := response.Cookies()
 	self.AddCookie(respCks)
 
-	data, _ := ioutil.ReadAll(response.Body)
-	return data, nil
+	data,err = ioutil.ReadAll(response.Body)
+	return data, err
 }
 
 //为请求设置header
