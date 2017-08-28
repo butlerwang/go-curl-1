@@ -16,12 +16,14 @@ import (
 	"os"
 	"io"
 	"errors"
+	"sync"
 )
 
 type Browser struct {
 	header map[string]string
 	cookies []*http.Cookie
 	client *http.Client
+	mux sync.Mutex
 }
 
 //初始化
@@ -51,6 +53,8 @@ func (self *Browser) SetProxyUrl(proxyUrl string)  {
 }
 
 func (self *Browser) AddHeader(header map[string]string)  {
+	self.mux.Lock()
+	defer self.mux.Unlock()
 	for k,v := range header{
 		self.header[k] = v
 	}
@@ -58,6 +62,8 @@ func (self *Browser) AddHeader(header map[string]string)  {
 
 //设置请求cookie
 func (self *Browser) AddCookie(cookies []*http.Cookie)  {
+	self.mux.Lock()
+	defer self.mux.Unlock()
 	self.cookies = append(self.cookies, cookies...)
 }
 
