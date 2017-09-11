@@ -15,15 +15,12 @@ import (
 	"mime/multipart"
 	"os"
 	"io"
-	"errors"
-	"sync"
 )
 
 type Browser struct {
 	header map[string]string
 	cookies []*http.Cookie
 	client *http.Client
-	mux sync.Mutex
 }
 
 //初始化
@@ -53,8 +50,6 @@ func (self *Browser) SetProxyUrl(proxyUrl string)  {
 }
 
 func (self *Browser) AddHeader(header map[string]string)  {
-	self.mux.Lock()
-	defer self.mux.Unlock()
 	for k,v := range header{
 		self.header[k] = v
 	}
@@ -62,8 +57,6 @@ func (self *Browser) AddHeader(header map[string]string)  {
 
 //设置请求cookie
 func (self *Browser) AddCookie(cookies []*http.Cookie)  {
-	self.mux.Lock()
-	defer self.mux.Unlock()
 	self.cookies = append(self.cookies, cookies...)
 }
 
@@ -84,6 +77,14 @@ func (self *Browser) Post(requestUrl string, params map[string]string) ([]byte, 
 	postData := self.encodeParams(params)
 
 	return self.makeRequest("POST", requestUrl, strings.NewReader(postData))
+}
+
+//发送Post json请求
+func (self *Browser) PostRaw(requestUrl string, json []byte) ([]byte, error) {
+	header := map[string]string{"Content-Type":"application/json"}
+	self.AddHeader(header)
+
+	return self.makeRequest("POST", requestUrl, bytes.NewBuffer(json))
 }
 
 //上传文件
@@ -122,14 +123,7 @@ func (self *Browser) UploadFile(requestUrl, fieldName, filename string, params m
 }
 
 
-func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) (data []byte,err error) {
-	defer func() {
-		if perr:=recover();perr!=nil{
-			s,_ := perr.(string)
-			err = errors.New(s)
-		}
-	}()
-
+func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) ([]byte, error) {
 	request,_ := http.NewRequest(method, requestUrl, body)
 	self.setHeader(request)
 	self.setRequestCookie(request)
@@ -142,8 +136,8 @@ func (self *Browser) makeRequest(method , requestUrl string, body io.Reader) (da
 	respCks := response.Cookies()
 	self.AddCookie(respCks)
 
-	data,err = ioutil.ReadAll(response.Body)
-	return data, err
+	data, _ := ioutil.ReadAll(response.Body)
+	return data, nil
 }
 
 //为请求设置header
